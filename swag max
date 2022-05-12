@@ -1,0 +1,73 @@
+#include "stm8s.h"
+#include "milis.h"
+#include "swspi.h"
+
+void max7219_init(void);
+
+uint8_t x=0,y=1,z=0; 
+uint16_t sec=0; 
+uint16_t desec=0;
+uint16_t min=0;
+
+
+void main(void){
+CLK_HSIPrescalerConfig(CLK_PRESCALER_HSIDIV1); // 16MHz z interního RC oscilátoru
+//inicializace fci
+init_milis(); 
+swspi_init();
+max7219_init();
+//inicializace vstupů
+GPIO_Init(GPIOD, GPIO_PIN_3,GPIO_MODE_IN_FL_NO_IT); //START/STOP
+GPIO_Init(GPIOC, GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT); //MEZIČAS
+GPIO_Init(GPIOE, GPIO_PIN_4,GPIO_MODE_IN_FL_NO_IT); //RESET
+//počáteční zobrazení na display nastavíme na nulu
+swspi_tx16(0x05<<8 | 0b0000000);
+swspi_tx16(0x03<<8 | 0b0000000);
+swspi_tx16(0x02<<8 | 0b0000000);
+swspi_tx16(0x01<<8 | 0b0000000);
+	
+	while (1){
+		
+		if(milis()-sec >=1000){
+			sec=milis();
+			if(x==9){x=0;}
+			x++;
+			swspi_tx16(0x01<<8 | x);
+		}
+		if(milis()-desec >=10000){
+			desec=milis();
+			if(y==9){y=0;}
+			y++;
+			swspi_tx16(0x02<<8 | y);
+		}
+		if(milis()-min >=60000){
+			min=milis();
+			if(z==9){z=0;}
+			z++;
+			swspi_tx16(0x03<<8 | z);
+		
+		}
+	}
+}
+
+void max7219_init(void){
+		swspi_tx16(0x0c<<8 | 0b00000001); 	//shut down
+		swspi_tx16(0x0b<<8 | 0b00000111);		//scan limit
+		swspi_tx16(0x09<<8 | 0b11111111);		//decode mode
+		swspi_tx16(0x0a<<8 | 0b00000011); 	//jas
+}
+
+
+
+		
+// pod tímto komentářem nic neměňte 
+#ifdef USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *   where the assert_param error has occurred.
+  * @param file: pointer to the source file name
+  * @param line: assert_param error line source number
+  * @retval : None
+  */
+void assert_failed(u8* file, u32 line)
